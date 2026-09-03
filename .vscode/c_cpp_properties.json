@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "gnu99",
+            "includePath": [
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/gfc/include",
+                "${workspaceFolder}/gfc/simple_logger/include",
+                "${workspaceFolder}/gfc/simple_json/include",
+                "/opt/homebrew/include",
+                "/opt/homebrew/include/SDL2",
+                "${env:HOME}/VulkanSDK/1.4.357.1/macOS/include"
+            ]
+        }
+    ],
+    "version": 4
+}
