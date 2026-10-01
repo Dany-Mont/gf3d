@@ -13,6 +13,8 @@
 #include "gf3d_pipeline.h"
 
 
+#define MESH_ATTRIBUTE_COUNT = 3;
+
 //forward declaration:
 typedef struct ObjData_S ObjData;
 
@@ -181,5 +183,15 @@ MeshUBO gf3d_mesh_get_ubo(
     GFC_Matrix4 modelMat,
     GFC_Color colorMod);
 
+
+
+/**
+ * @brief queue up a render for the current draw frame
+ * @param mesh the mesh to render
+ * @param pipe the pipeline to use
+ * @param uboData the data to use to draw the mesh
+ * @param texture texture data to use
+ */
+void gf3d_mesh_queue_render(Mesh *mesh,Pipeline *pipe,void *uboData,Texture *texture);
 
 #endif

@@ -19,6 +19,7 @@
 #include "gf3d_vgraphics.h"
 #include "gf3d_pipeline.h"
 #include "gf3d_swapchain.h"
+#include "model.h"
 
 extern int __DEBUG;
 
@@ -65,12 +66,13 @@ int main(int argc,char *argv[])
         gf2d_font_update();
         //camera updaes
         gf3d_vgraphics_render_start();
+        
                 //2D draws
                 gf2d_sprite_draw_image(bg,gfc_vector2d(0,0));
                 gf2d_font_draw_line_tag("ALT+F4 to exit",FT_H1,GFC_COLOR_WHITE, gfc_vector2d(10,10));
                 gf2d_mouse_draw();
         gf3d_vgraphics_render_end();
-        if (gfc_input_command_down("exit"))_done = 1; // exit condition
+        if (gfc_input_command_down("enter"))_done = 1; // exit condition
         game_frame_delay();
     }    
     vkDeviceWaitIdle(gf3d_vgraphics_get_default_logical_device());    
@@ -108,6 +110,6 @@ void game_frame_delay()
         SDL_Delay(frame_delay - diff);
     }
     fps = 1000.0/MAX(SDL_GetTicks() - then,0.001);
-//     slog("fps: %f",fps);
+    //  slog("fps: %f",fps);
 }
 /*eol@eof*/
