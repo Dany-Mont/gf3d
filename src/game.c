@@ -19,6 +19,7 @@
 #include "gf3d_vgraphics.h"
 #include "gf3d_pipeline.h"
 #include "gf3d_swapchain.h"
+#include "gf3d_mesh.h"
 #include "model.h"
 
 extern int __DEBUG;
@@ -40,6 +41,10 @@ int main(int argc,char *argv[])
 {
     //local variables
     Sprite *bg;
+    Model *model;
+    Model *sky;
+    GFC_Matrix4 mat;
+    GFC_Matrix4 *view;
     //initializtion    
     parse_arguments(argc,argv);
     init_logger("gf3d.log",0);
@@ -58,6 +63,11 @@ int main(int argc,char *argv[])
     slog_sync();
     bg = gf2d_sprite_load_image("images/bg_flat.png");
     gf2d_mouse_load("actors/mouse.actor");
+    gfc_matrix4_identity(mat);
+    view = gf3d_vgraphics_get_view_matrix();
+    sky = model_load("models/sky.model");//the sky model file lives in models/, its obj and texture are in models/sky/
+    model = model_load("models/dino.model");
+
     // main game loop    
     while(!_done)
     {
@@ -65,10 +75,19 @@ int main(int argc,char *argv[])
         gf2d_mouse_update();
         gf2d_font_update();
         //camera updaes
+        gfc_matrix4_view(
+            *view,
+            gfc_vector3d(10,-20,10),
+            gfc_vector3d(0,0,0),
+            gfc_vector3d(0,0,1)
+        );
         gf3d_vgraphics_render_start();
         
+                //3D draws
+                model_queue_render_sky(sky,mat,GFC_COLOR_GREEN);//does nothing until the sky pipeline is set up in model_manager_init
+                model_queue_render(model,mat,GFC_COLOR_WHITE);
                 //2D draws
-                gf2d_sprite_draw_image(bg,gfc_vector2d(0,0));
+                //gf2d_sprite_draw_image(bg,gfc_vector2d(0,0));//commented out, a full screen background would cover the 3D draws
                 gf2d_font_draw_line_tag("ALT+F4 to exit",FT_H1,GFC_COLOR_WHITE, gfc_vector2d(10,10));
                 gf2d_mouse_draw();
         gf3d_vgraphics_render_end();
