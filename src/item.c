@@ -12,14 +12,14 @@
 #include "item.h"
 
 #define ITEM_GRAVITY	0.04f
-#define ITEM_FALL_LIMIT_Z	-60.0f	// items that fall below this are removed
+#define ITEM_FALL_LIMIT_Z	-60.0f	
 
 typedef struct
 {
     ItemDef def;
-    Uint8 thrown;       // 0 = lying around waiting to be picked up, 1 = a thrown bomb
-    Uint8 ownerIndex;   // who threw it (thrown only)
-    int fuse;           // ticks until it explodes (thrown only)
+    Uint8 thrown;      
+    Uint8 ownerIndex;   
+    int fuse;        
 }ItemEntityData;
 
 int item_update(Entity *self);
@@ -187,7 +187,6 @@ int item_update(Entity *self)
     if (!self || !self->data)return 0;
     data = (ItemEntityData*)self->data;
 
-    // ---- land on platforms (position was already moved by entity_update) ----
     if ((self->velocity.z <= 0) &&
         level_ground_test(level_get_the(),self->position.x,self->position.y,
             self->position.z,self->position.z - self->velocity.z,0,&groundZ))
@@ -205,14 +204,12 @@ int item_update(Entity *self)
         return 1;
     }
 
-    // the item's touch area is a circle sitting on top of its position
     area = gfc_shape_circle(self->position.x,
                             self->position.z + data->def.pickupRadius,
                             data->def.pickupRadius);
 
     if (!data->thrown)
     {
-        // ---- waiting to be picked up ----
         for (i = 0; i < PLAYER_MAX; i++)
         {
             player = player_get(i);
@@ -229,7 +226,6 @@ int item_update(Entity *self)
     }
     else
     {
-        // ---- thrown bomb: goes off when the fuse runs out or it touches someone else ----
         data->fuse--;
         explode = (data->fuse <= 0);
         for (i = 0; (i < PLAYER_MAX)&&(!explode); i++)
@@ -244,11 +240,11 @@ int item_update(Entity *self)
         {
             player_blast(
                 gfc_vector3d(self->position.x,self->position.y,self->position.z + data->def.pickupRadius),
-                data->def.blastRadius,
-                data->def.blastDamage,
-                data->def.blastKnockback,
-                data->def.blastKnockbackGrowth,
-                data->def.blastAngle);
+                    data->def.blastRadius,
+                    data->def.blastDamage,
+                    data->def.blastKnockback,
+                    data->def.blastKnockbackGrowth,
+                    data->def.blastAngle);
             entity_free(self);
             return 1;
         }

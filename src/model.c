@@ -27,11 +27,9 @@ typedef struct
 
 static ModelManager model_manager = {0};
 
-//forward declarations start
 void model_delete(Model *model);
 void model_system_close();
 Model *model_get_by_filename(const char *filename);
-//forward declarations end
 
 void model_manager_init(Uint32 modelCount)
 {
@@ -55,7 +53,6 @@ void model_manager_init(Uint32 modelCount)
     }
     model_manager.modelCount = modelCount;
 
-    //the model system owns the mesh system, it has to exist before any model loads
     gf3d_mesh_system_init(1024);
 
 
@@ -129,7 +126,6 @@ Model *model_new()
         if (emptyIndex < 0)emptyIndex = i;
         if (strlen(model_manager.modelList[i].filename) == 0)
         {
-            //never used slot, take it
             model_manager.modelList[i]._refCount = 1;
             return &model_manager.modelList[i];
         }
@@ -139,7 +135,6 @@ Model *model_new()
         slog("model_new: no free slots for new models");
         return NULL;
     }
-    //every slot has been used once, recycle the first one nobody is using
     model_delete(&model_manager.modelList[emptyIndex]);
     model_manager.modelList[emptyIndex]._refCount = 1;
     return &model_manager.modelList[emptyIndex];
@@ -189,7 +184,6 @@ Model *model_load(const char *filename)
         sj_free(json);
         return NULL;
     }
-    //a missing or broken texture falls back to the default one
     texture = NULL;
     str2 = sj_object_get_string(data,"texture");
     if(str2)
@@ -202,9 +196,9 @@ Model *model_load(const char *filename)
     }
     if(!texture)
     {
-        texture = gf3d_texture_load("images/default.png");//reloading bumps the ref count so the free in model_delete balances
+        texture = gf3d_texture_load("images/default.png");
     }
-    sj_free(json);//everything we needed has been copied out of it
+    sj_free(json);
 
     model = model_new();
     if(!model)
