@@ -278,9 +278,8 @@ static GFC_Shape player_world_shape(GFC_Shape shape, int facing, GFC_Vector3D po
 	}
 	if (facing < 0)
 	{
-		// mirror left/right
 		if (shape.type == ST_RECT)
-		{
+			{
 			shape.s.r.x = -(shape.s.r.x + shape.s.r.w);
 		}
 		else if (shape.type == ST_CIRCLE)
@@ -301,9 +300,9 @@ GFC_Shape player_get_hurtbox(Entity *player)
 {
 	PlayerEntityData *data;
 	if ((!player)||(!player->data))return gfc_shape_rect(0,0,0,0);
-	data = (PlayerEntityData*)player->data;
-	if (data->eliminated)return gfc_shape_rect(-99999,-99999,0,0);	// out of the game: nothing can touch them
-	return player_world_shape(data->def.hurtbox, data->facing, player->position, player_size(data));
+		data = (PlayerEntityData*)player->data;
+		if (data->eliminated)return gfc_shape_rect(-99999,-99999,0,0);	// out of the game: nothing can touch them
+		return player_world_shape(data->def.hurtbox, data->facing, player->position, player_size(data));
 }
 
 /**
@@ -327,7 +326,6 @@ static void player_apply_hit(Entity *self, PlayerEntityData *data, Entity *other
 	float damage, knockback;
 	attack = &data->def.attack;
 
-	// a boost on the attacker (like the mushroom) hits harder
 	damage = attack->damage * data->def.strength;
 	if (player_buff_active(data))damage *= data->buff.damageMult;
 	otherData->percent += damage;
@@ -359,14 +357,14 @@ static void player_attack_tick(Entity *self, PlayerEntityData *data)
 		{
 			other = players[i];
 			if ((!other)||(other == self))continue;
-			if (data->attackHitMask & (1 << i))continue;	// each attack only hits a player once
+			if (data->attackHitMask & (1 << i))continue;
 			otherData = (PlayerEntityData*)other->data;
 			if ((!otherData)||(otherData->eliminated))continue;
 			hurtbox = player_get_hurtbox(other);
 			if (gfc_shape_overlap(hitbox, hurtbox))
 			{
 				data->attackHitMask |= (1 << i);
-				if (player_invincible(otherData))continue;	// star power: nothing gets through
+				if (player_invincible(otherData))continue;
 				player_apply_hit(self, data, other, otherData);
 			}
 		}
@@ -408,17 +406,15 @@ static void player_hazard_tick(Entity *self, PlayerEntityData *data)
 			return;
 		}
 		// spikes
-		if (player_invincible(data))continue;	// star power walks over spikes
+		if (player_invincible(data))continue;
 		data->percent += hazard->damage;
 		knockback = (hazard->power + data->percent * 0.01f) / data->def.weight;
-		dirX = (self->position.x < hazard->box.x + hazard->box.w / 2) ? -1 : 1;	// away from the middle of the spikes
+		dirX = (self->position.x < hazard->box.x + hazard->box.w / 2) ? -1 : 1;
 		player_launch(self, data, knockback, dirX, PLAYER_SPIKE_ANGLE);
 		data->hazardCooldown = PLAYER_HAZARD_COOLDOWN;
 		return;
 	}
 }
-
-// ---- power ups ----
 
 int player_apply_item(Entity *player, const ItemDef *def)
 {
@@ -474,8 +470,6 @@ void player_blast(GFC_Vector3D center, float radius, float damage, float knockba
 	}
 }
 
-// ---- camera: follows the middle of all players and pulls back as they spread out ----
-
 static void player_update_camera(PlayerEntityData *data)
 {
 	GFC_Matrix4* view;
@@ -518,9 +512,6 @@ static void player_update_camera(PlayerEntityData *data)
 	);
 }
 
-/**
- * Called when a player leaves the blast zone. Costs a life; with lives left they come back at their spawn point at 0 percent.
- */
 static void player_lose_stock(Entity *self, PlayerEntityData *data)
 {
 	data->stocks--;
@@ -564,8 +555,6 @@ int player_update(Entity* self)
 	if (!self || !self->data) return 0;
 	data = (PlayerEntityData*)self->data;
 	def = &data->def;
-
-	// ---- out of the match: nothing to do, but player 1 still runs the shared camera ----
 	if (data->eliminated)
 	{
 		self->velocity = gfc_vector3d(0, 0, 0);
@@ -576,8 +565,6 @@ int player_update(Entity* self)
 		return 1;
 	}
 
-	// ---- ground collision (position was already moved by entity_update) ----
-	// The previous height of the feet is where they were before this tick's movement.
 	if ((self->velocity.z <= 0) &&
 		level_ground_test(level_get_the(), self->position.x, self->position.y,
 			self->position.z, self->position.z - self->velocity.z, data->dropHeld, &groundZ))
@@ -592,7 +579,6 @@ int player_update(Entity* self)
 		self->grounded = 0;
 	}
 
-	// ---- blast zone: leaving the level's bounds (or falling forever) costs a life ----
 	if ((self->position.z < PLAYER_FALL_LIMIT_Z)||
 		(!level_in_bounds(level_get_the(), self->position.x, self->position.z)))
 	{
@@ -604,10 +590,10 @@ int player_update(Entity* self)
 		groundZ = 0;
 	}
 
-	// ---- hazards ----
+
 	player_hazard_tick(self, data);
 
-	// ---- power up timer ----
+
 	if (data->buffTicks > 0)
 	{
 		data->buffTicks--;
@@ -619,12 +605,10 @@ int player_update(Entity* self)
 	if (player_buff_active(data))
 	{
 		speedMult = data->buff.speedMult;
-		// jump speed grows with the square root of the height, so 2x higher needs about 1.41x the speed
 		jumpMult = sqrt(data->buff.jumpMult);
 	}
 	size = player_size(data);
 
-	// ---- what the player is allowed to do this tick ----
 	moveX = data->moveX;
 	jump = data->jumpQueued;
 	attack = data->attackQueued;
@@ -634,7 +618,6 @@ int player_update(Entity* self)
 	data->throwQueued = 0;
 	if (data->hitstun > 0)
 	{
-		// knocked back: no control until it wears off
 		data->hitstun--;
 		moveX = 0;
 		jump = 0;
@@ -642,7 +625,6 @@ int player_update(Entity* self)
 		throwItem = 0;
 	}
 
-	// ---- horizontal movement ----
 	runSpeed = def->runSpeed * speedMult;
 	accel = (self->grounded ? def->groundAccel : def->airAccel) * speedMult;
 	friction = (self->grounded ? def->groundFriction : def->airFriction) * speedMult;
@@ -661,7 +643,6 @@ int player_update(Entity* self)
 		else self->velocity.x = 0;
 	}
 
-	// ---- attacking ----
 	if ((attack)&&(data->attackFrame == 0))
 	{
 		data->attackFrame = 1;
@@ -672,7 +653,6 @@ int player_update(Entity* self)
 		player_attack_tick(self, data);
 	}
 
-	// ---- throwing a carried bomb ----
 	if ((throwItem)&&(data->holding))
 	{
 		item_spawn_thrown(&data->heldItem,
@@ -683,7 +663,6 @@ int player_update(Entity* self)
 		data->holding = 0;
 	}
 
-	// ---- jumping (ground jump, then air jumps) ----
 	jumpSpeed = def->jumpSpeed * jumpMult;
 	airJumpSpeed = def->airJumpSpeed * jumpMult;
 	if (jump)
@@ -711,7 +690,7 @@ int player_update(Entity* self)
 	return 1;
 }
 
-#define DEBUG_BOX_DEPTH 2.0f	// how thick the flat boxes are drawn along y, so they can be seen
+#define DEBUG_BOX_DEPTH 2.0f
 
 static void player_draw_shape(GFC_Shape shape, float y, GFC_Color color)
 {
@@ -723,7 +702,6 @@ static void player_draw_shape(GFC_Shape shape, float y, GFC_Color color)
 	}
 	else if (shape.type == ST_CIRCLE)
 	{
-		// circles are drawn as the square around them
 		level_draw_box(level, shape.s.c.x - shape.s.c.r, y - DEBUG_BOX_DEPTH / 2, shape.s.c.y - shape.s.c.r,
 			shape.s.c.r * 2, DEBUG_BOX_DEPTH, shape.s.c.r * 2, color);
 	}
@@ -744,10 +722,8 @@ void player_draw_hitboxes()
 		data = (PlayerEntityData*)player->data;
 		if (data->eliminated)continue;
 
-		// body: blue
 		player_draw_shape(player_get_hurtbox(player), player->position.y, gfc_color(0.2f, 0.4f, 1.0f, 0.4f));
 
-		// attack: yellow while it is winding up or recovering, red on the frames that can hit
 		if (data->attackFrame > 0)
 		{
 			attack = &data->def.attack;

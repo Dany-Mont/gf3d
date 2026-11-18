@@ -77,7 +77,6 @@ void window_set_setting(const char *key, const char *value)
 	settingCount++;
 }
 
-// ---- loading ----
 
 static void load_widgets(Window *win, SJson *list, int isButton)
 {
@@ -282,7 +281,6 @@ void window_manager_close()
 	white = NULL;
 }
 
-// ---- every frame ----
 
 void window_manager_update()
 {
@@ -306,7 +304,6 @@ void window_manager_update()
 	}
 }
 
-// a "set" button is yellow while its value is the one that is chosen
 static int is_selected(Widget *w)
 {
 	char key[48];
@@ -341,7 +338,6 @@ static void draw_widget(Widget *w, GFC_Vector2D origin)
 		else if (w->hovered)color = gfc_color(0.4f, 0.4f, 0.4f, 1);
 		else color = gfc_color(0.2f, 0.2f, 0.2f, 1);
 	window_draw_box(pos.x, pos.y, w->size.x, w->size.y, color);
-	// center the text in the button
 	bounds = gf2d_font_get_bounds_tag(text, w->style);
 	gf2d_font_draw_line_tag(text, w->style, GFC_COLOR_WHITE,
 		gfc_vector2d(pos.x + (w->size.x - bounds.x) / 2, pos.y + (w->size.y - bounds.y) / 2));
