@@ -8,6 +8,7 @@
 #include "gfc_vector.h"
 #include "gfc_matrix.h"
 #include "gfc_audio.h"
+#include "gfc_string.h"
 #include "gfc_actions.h"
 
 #include "gf2d_sprite.h"
@@ -34,6 +35,7 @@ static int _done = 0;
 static Uint32 frame_delay = 16;
 static float fps = 0;
 
+// Gameplay runs at a fixed 60 ticks per second, independent of render speed
 #define TICK_MS				(1000.0f / 60.0f)
 #define MAX_TICKS_PER_FRAME	5
 
@@ -86,25 +88,29 @@ int main(int argc,char *argv[])
         last = now;
 
         gfc_input_update();
-        //gfc_input_controller_slog(0);
+        gfc_input_controller_slog(0);   // debug: prints which buttons are held on pad 0
         gf2d_mouse_update();
         gf2d_font_update();
 
 
+        // ---- what the game is doing is decided by the menus (see window.h) ----
         state = window_manager_get_state();
         if (state == GS_START_MATCH)
         {
             match_start();
+            // if the stage could not load, match_start already sent us back to the main menu
             if (match_is_active())window_manager_set_state(GS_PLAYING);
         }
         else if ((match_is_active())&&(state == GS_MENU))
         {
-            match_end(); 
+
+            match_end();       // back at a menu: throw the match away
         }
         else if (state == GS_QUIT)
         {
             _done = 1;
         }
+        // ---- pause ----
         state = window_manager_get_state();
         if ((state == GS_PLAYING)&&(gfc_input_command_pressed("pause")))
         {
@@ -114,11 +120,14 @@ int main(int argc,char *argv[])
         {
             window_manager_action("resume","");
         }
+        // ---- menus ----
         window_manager_update();
 
+        // ---- the match: only runs while playing, so pause and results freeze it ----
         state = window_manager_get_state();
         if (state == GS_PLAYING)
         {
+            // thinks (input)
             entity_system_think();
 
             // updates, on the fixed timestep (may run 0 or more times per frame)
@@ -126,16 +135,16 @@ int main(int argc,char *argv[])
             while ((accumulator >= TICK_MS)&&(ticks < MAX_TICKS_PER_FRAME))
             {
                 entity_system_update();
-                match_update(); 
+                match_update();    // power-up drops and win check
                 accumulator -= TICK_MS;
                 ticks++;
-                if (window_manager_get_state() != GS_PLAYING)break;  
+                if (window_manager_get_state() != GS_PLAYING)break;    // somebody won
             }
-            if (ticks == MAX_TICKS_PER_FRAME) accumulator = 0; 
+            if (ticks == MAX_TICKS_PER_FRAME) accumulator = 0; // fell too far behind, drop the backlog
         }
         else
         {
-            accumulator = 0;  
+            accumulator = 0;   // so the game does not jump ahead after a pause
         }
         // 3D draws
         gf3d_vgraphics_render_start();

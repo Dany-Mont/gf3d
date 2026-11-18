@@ -1,3 +1,4 @@
+#include <math.h>
 #include <string.h>
 #include <SDL.h>
 
@@ -8,7 +9,6 @@
 #include "gf3d_obj_load.h"
 
 #include "level.h"
-
 
 static Level *theLevel = NULL;
 Level * level_get_the()
@@ -42,11 +42,11 @@ int level_line_test(Level *level, GFC_Edge3D edge, GFC_Vector3D *contact)
         for(j = 0; j < prim->objData->face_count; j++)
         {
             t.a = prim->objData->faceVertices[prim->objData->outFace[j].verts[0]].vertex;
-                t.b = prim->objData->faceVertices[prim->objData->outFace[j].verts[1]].vertex;
-               t.c = prim->objData->faceVertices[prim->objData->outFace[j].verts[2]].vertex;
+            t.b = prim->objData->faceVertices[prim->objData->outFace[j].verts[1]].vertex;
+            t.c = prim->objData->faceVertices[prim->objData->outFace[j].verts[2]].vertex;
             if (gfc_triangle_edge_test(edge,t,&out))
             {
-                // keep the hit closest to where the line starts
+
                 gfc_vector3d_sub(diff,out,start);
                 dist = gfc_vector3d_magnitude_squared(diff);
                 if ((!found)||(dist < bestDist))
@@ -61,8 +61,6 @@ int level_line_test(Level *level, GFC_Edge3D edge, GFC_Vector3D *contact)
     return found;
 }
 
-
-// Logs the lowest and highest corner of the terrain mesh so platform boxes in the level json can be matched to it exactly.
 static void level_log_terrain_extents(Level *level)
 {
     Mesh *mesh;
@@ -110,7 +108,7 @@ static void level_log_terrain_extents(Level *level)
 int level_in_bounds(Level *level, float x, float z)
 {
     if (!level)return 1;
-    if ((level->bounds.w <= 0)||(level->bounds.d <= 0))return 1;   // no bounds set in the json
+    if ((level->bounds.w <= 0)||(level->bounds.d <= 0))return 1;
     if ((x < level->bounds.x)||(x > level->bounds.x + level->bounds.w))return 0;
     if ((z < level->bounds.z)||(z > level->bounds.z + level->bounds.d))return 0;
     return 1;
@@ -120,7 +118,7 @@ int level_in_bounds(Level *level, float x, float z)
 
 int level_ground_test(Level *level, float x, float y, float feetZ, float prevFeetZ, Uint8 dropThrough, float *groundZ)
 {
-    LevelPlatform *platform;
+    LevelPlatform *platform, *bestPlatform = NULL;
     int i;
     int found = 0;
     float top, best = 0;
@@ -128,22 +126,30 @@ int level_ground_test(Level *level, float x, float y, float feetZ, float prevFee
     for(i = 0; i < level->platformCount; i++)
     {
         platform = &level->platforms[i];
+        if (platform->broken)continue;
         if ((platform->oneWay)&&(dropThrough))continue;
         if ((x < platform->box.x)||(x > platform->box.x + platform->box.w))continue;
         if ((y < platform->box.y)||(y > platform->box.y + platform->box.h))continue;
         top = platform->box.z + platform->box.d;
-        if (feetZ > top)continue;                                   // still above it, nothing to land on yet
-        if (prevFeetZ < top - LEVEL_GROUND_TOLERANCE)continue;      // was already below the top last tick (came from underneath)
+        if (feetZ > top)continue;
+        if (prevFeetZ < top - LEVEL_GROUND_TOLERANCE)continue;
         if ((!found)||(top > best))
         {
             best = top;
+            bestPlatform = platform;
             found = 1;
         }
+    }
+
+    if ((bestPlatform)&&(bestPlatform->breakable)&&(!bestPlatform->triggered))
+    {
+        bestPlatform->triggered = 1;
+        bestPlatform->timer = 0;
+        slog("breakable platform stepped on, it will break in %i ticks",bestPlatform->breakTicks);
     }
     if ((found)&&(groundZ))*groundZ = best;
     return found;
 }
-
 
 Level * level_load(const char *fileName)
 {
@@ -154,6 +160,9 @@ Level * level_load(const char *fileName)
     SJson *entry;
     LevelPlatform *platform;
     LevelHazard *hazard;
+    float breakSeconds, respawnSeconds, moveSeconds, seconds;
+    int breakCount, moveCount;
+    SJson *moveData;
     int i,count,oneWay;
     const char *str;
     Level *level;
@@ -214,6 +223,29 @@ Level * level_load(const char *fileName)
             oneWay = 0;
             sj_object_get_int(entry,"oneway",&oneWay);
             platform->oneWay = oneWay ? 1 : 0;
+            oneWay = 0;
+            sj_object_get_int(entry,"breakable",&oneWay);
+            platform->breakable = oneWay ? 1 : 0;
+            breakSeconds = 1.0f;
+            respawnSeconds = 5.0f;
+            sj_object_get_float(entry,"breakSeconds",&breakSeconds);
+            sj_object_get_float(entry,"respawnSeconds",&respawnSeconds);
+            platform->breakTicks = (int)(breakSeconds * 60);
+            platform->respawnTicks = (int)(respawnSeconds * 60);
+
+            moveData = sj_object_get_value(entry,"moving");
+            if (moveData)
+            {
+                moveSeconds = 6.0f;
+                sj_object_get_float(moveData,"x",&platform->moveX);
+                sj_object_get_float(moveData,"z",&platform->moveZ);
+                sj_object_get_float(moveData,"seconds",&moveSeconds);
+                platform->moving = 1;
+                platform->moveTicks = (int)(moveSeconds * 60);
+                if (platform->moveTicks < 1)platform->moveTicks = 1;
+                platform->startBox = platform->box;
+                platform->prevBox = platform->box;
+            }
             slog("level platform %i: x %f y %f z %f  w %f h %f d %f  oneway %i",
                 level->platformCount,
                 platform->box.x,platform->box.y,platform->box.z,
@@ -222,8 +254,7 @@ Level * level_load(const char *fileName)
             level->platformCount++;
         }
     }
-    // hazards: "hazards": [ {"type":"jump_pad","m":[x,y,z],"s":[w,h,d],"power":2.0},
-    //                       {"type":"spikes","m":[...],"s":[...],"damage":8,"power":0.9} ]
+
     platforms = sj_object_get_value(data,"hazards");
     if(platforms)
     {
@@ -237,6 +268,8 @@ Level * level_load(const char *fileName)
             hazard = &level->hazards[level->hazardCount];
             if (strcmp(str,"jump_pad") == 0)hazard->type = HAZARD_JUMP_PAD;
             else if (strcmp(str,"spikes") == 0)hazard->type = HAZARD_SPIKES;
+            else if (strcmp(str,"geyser") == 0)hazard->type = HAZARD_GEYSER;
+            else if (strcmp(str,"ice") == 0)hazard->type = HAZARD_ICE;
             else
             {
                 slog("unknown hazard type %s",str);
@@ -245,11 +278,38 @@ Level * level_load(const char *fileName)
             hazard->box = gfc_box_from_config(entry);
             hazard->power = (hazard->type == HAZARD_JUMP_PAD) ? 2.0f : 0.9f;
             hazard->damage = 8;
+            if (hazard->type == HAZARD_GEYSER)
+            {
+                hazard->power = 1.1f;
+                hazard->damage = 12;
+            }
+            if (hazard->type == HAZARD_ICE)hazard->power = 0.1f;
             sj_object_get_float(entry,"power",&hazard->power);
             sj_object_get_float(entry,"damage",&hazard->damage);
+
+            seconds = 2.0f;
+            sj_object_get_float(entry,"offSeconds",&seconds);
+            hazard->offTicks = (int)(seconds * 60);
+            seconds = 0.6f;
+            sj_object_get_float(entry,"warnSeconds",&seconds);
+            hazard->warnTicks = (int)(seconds * 60);
+            seconds = 1.0f;
+            sj_object_get_float(entry,"onSeconds",&seconds);
+            hazard->onTicks = (int)(seconds * 60);
+            seconds = 0;
+            sj_object_get_float(entry,"startSeconds",&seconds);
+            hazard->timer = (int)(seconds * 60);
             level->hazardCount++;
         }
     }
+    breakCount = 0;
+    moveCount = 0;
+    for (i = 0; i < level->platformCount; i++)
+    {
+        if (level->platforms[i].breakable)breakCount++;
+        if (level->platforms[i].moving)moveCount++;
+    }
+    slog("level loaded: %i platforms (%i breakable, %i moving), %i hazards",level->platformCount,breakCount,moveCount,level->hazardCount);
     str = sj_object_get_string(data,"music");
     if(str)
     {
@@ -266,7 +326,6 @@ Level * level_load(const char *fileName)
     }
     level->json = json;
 
-    // only one level is active at a time
     if ((theLevel)&&(theLevel != level))level_free(theLevel);
     theLevel = level;
 
@@ -303,16 +362,125 @@ void level_free(Level *level)
     free(level);
 }
 
+void level_update(Level *level)
+{
+    LevelPlatform *platform;
+    float offset;
+    int i;
+    if (!level)return;
+    for (i = 0; i < level->hazardCount; i++)level->hazards[i].timer++;
+    for (i = 0; i < level->platformCount; i++)
+    {
+        platform = &level->platforms[i];
+        if (!platform->moving)continue;
+        platform->prevBox = platform->box;
+        platform->moveTimer++;
+        offset = sin(2 * GFC_PI * platform->moveTimer / platform->moveTicks);
+        platform->box.x = platform->startBox.x + platform->moveX * offset;
+        platform->box.z = platform->startBox.z + platform->moveZ * offset;
+        platform->velX = platform->box.x - platform->prevBox.x;
+        platform->velZ = platform->box.z - platform->prevBox.z;
+    }
+    for (i = 0; i < level->platformCount; i++)
+    {
+        platform = &level->platforms[i];
+        if (!platform->breakable)continue;
+        if (platform->broken)
+        {
+            platform->timer++;
+            if (platform->timer >= platform->respawnTicks)
+            {
+                platform->broken = 0;
+                platform->triggered = 0;
+                platform->timer = 0;
+                slog("breakable platform %i is back",i);
+            }
+        }
+        else if (platform->triggered)
+        {
+            platform->timer++;
+            if (platform->timer >= platform->breakTicks)
+            {
+                platform->broken = 1;
+                platform->timer = 0;
+                slog("breakable platform %i broke",i);
+            }
+        }
+    }
+}
+
+int level_hazard_state(const LevelHazard *hazard)
+{
+    int cycle, t;
+    if ((!hazard)||(hazard->type != HAZARD_GEYSER))return 2;
+    cycle = hazard->offTicks + hazard->warnTicks + hazard->onTicks;
+    if (cycle <= 0)return 2;
+    t = hazard->timer % cycle;
+    if (t < hazard->offTicks)return 0;
+    if (t < hazard->offTicks + hazard->warnTicks)return 1;
+    return 2;
+}
+
+int level_platform_carry(Level *level, float x, float y, float feetZ, float *dx, float *dz)
+{
+    LevelPlatform *platform;
+    float prevTop;
+    int i;
+    if (!level)return 0;
+    for (i = 0; i < level->platformCount; i++)
+    {
+        platform = &level->platforms[i];
+        if ((!platform->moving)||(platform->broken))continue;
+
+        prevTop = platform->prevBox.z + platform->prevBox.d;
+        if ((x < platform->prevBox.x)||(x > platform->prevBox.x + platform->prevBox.w))continue;
+        if ((y < platform->prevBox.y)||(y > platform->prevBox.y + platform->prevBox.h))continue;
+        if ((feetZ > prevTop + 0.5f)||(feetZ < prevTop - 0.5f))continue;
+        if (dx)*dx = platform->velX;
+        if (dz)*dz = platform->velZ;
+        return 1;
+    }
+    return 0;
+}
 
 static void level_draw_hazards(Level *level)
 {
     LevelHazard *hazard;
+    LevelPlatform *platform;
     GFC_Color color;
-    int i;
+    int i, state;
+
+    for (i = 0; i < level->platformCount; i++)
+    {
+        platform = &level->platforms[i];
+        if (platform->moving)
+        {
+            level_draw_box(level,platform->box.x,platform->box.y,platform->box.z,platform->box.w,platform->box.h,platform->box.d,gfc_color(0.4f,0.45f,0.6f,1));
+            continue;
+        }
+        if ((!platform->breakable)||(platform->broken))continue;
+        if ((platform->triggered)&&((platform->timer / 4) % 2))color = gfc_color(0.9f,0.15f,0.1f,1);
+        else color = gfc_color(0.55f,0.35f,0.15f,1);
+        level_draw_box(level,platform->box.x,platform->box.y,platform->box.z,platform->box.w,platform->box.h,platform->box.d,color);
+    }
     for (i = 0; i < level->hazardCount; i++)
     {
         hazard = &level->hazards[i];
-        color = (hazard->type == HAZARD_JUMP_PAD) ? gfc_color(0.1f,0.9f,0.3f,1) : gfc_color(0.85f,0.1f,0.1f,1);
+        if (hazard->type == HAZARD_GEYSER)
+        {
+
+            state = level_hazard_state(hazard);
+            if (state == 2)
+            {
+                level_draw_box(level,hazard->box.x,hazard->box.y,hazard->box.z,hazard->box.w,hazard->box.h,hazard->box.d,gfc_color(1.0f,0.45f,0.05f,1));
+                continue;
+            }
+            color = ((state == 1)&&((hazard->timer / 4) % 2)) ? gfc_color(1.0f,0.6f,0.1f,1) : gfc_color(0.25f,0.1f,0.05f,1);
+            level_draw_box(level,hazard->box.x,hazard->box.y,hazard->box.z,hazard->box.w,hazard->box.h,0.6f,color);
+            continue;
+        }
+        if (hazard->type == HAZARD_ICE)color = gfc_color(0.6f,0.85f,1.0f,1);
+        else color = (hazard->type == HAZARD_JUMP_PAD) ? gfc_color(0.1f,0.9f,0.3f,1) : gfc_color(0.85f,0.1f,0.1f,1);
         level_draw_box(level,hazard->box.x,hazard->box.y,hazard->box.z,hazard->box.w,hazard->box.h,hazard->box.d,color);
     }
 }
@@ -348,13 +516,13 @@ void level_draw_box(Level *level, float x, float y, float z, float w, float h, f
     modelSize = gfc_vector3d(level->terrainMax.x - level->terrainMin.x,
                              level->terrainMax.y - level->terrainMin.y,
                              level->terrainMax.z - level->terrainMin.z);
-    if ((modelSize.x <= 0)||(modelSize.y <= 0)||(modelSize.z <= 0))return;//terrain is not a box we can scale
+    if ((modelSize.x <= 0)||(modelSize.y <= 0)||(modelSize.z <= 0))return;
     modelCenter = gfc_vector3d((level->terrainMin.x + level->terrainMax.x) / 2,
                                (level->terrainMin.y + level->terrainMax.y) / 2,
                                (level->terrainMin.z + level->terrainMax.z) / 2);
-    // the terrain model is a box, so stretch a copy of it to the size we want
+
     scale = gfc_vector3d(w / modelSize.x, h / modelSize.y, d / modelSize.z);
-    // the model is scaled around its own origin, so shift it so its center lands on the center of the box
+
     position = gfc_vector3d(x + w / 2 - modelCenter.x * scale.x,
                             y + h / 2 - modelCenter.y * scale.y,
                             z + d / 2 - modelCenter.z * scale.z);
@@ -362,7 +530,6 @@ void level_draw_box(Level *level, float x, float y, float z, float w, float h, f
     model_queue_render(level->terrain,mat,color);
 }
 
-// F1 turns the debug boxes on and off (platforms here, hitboxes in player.c)
 void level_draw_debug(Level *level)
 {
     static Uint8 f1Last = 0;
@@ -381,7 +548,9 @@ void level_draw_debug(Level *level)
     for(i = 0; i < level->platformCount; i++)
     {
         platform = &level->platforms[i];
+        if (platform->broken)continue;
         color = platform->oneWay ? gfc_color(0,1,0,0.4) : gfc_color(1,0,0,0.4);
+
         level_draw_box(level,
             platform->box.x - platform->box.w * 0.01, platform->box.y - platform->box.h * 0.01, platform->box.z - platform->box.d * 0.01,
             platform->box.w * 1.02, platform->box.h * 1.02, platform->box.d * 1.02, color);

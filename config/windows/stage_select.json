@@ -22,7 +22,7 @@
         ],
         "buttons": [
             {
-                "text": "Test Stage",
+                "text": "Battlefield",
                 "position": [
                     490,
                     260
@@ -35,7 +35,7 @@
                 "param": "stage=src/levels/test.level"
             },
             {
-                "text": "Test Stage 2",
+                "text": "items test",
                 "position": [
                     490,
                     360
@@ -46,6 +46,19 @@
                 ],
                 "action": "set",
                 "param": "stage=src/levels/test2.level"
+            },
+            {
+                "text": "platform test",
+                "position": [
+                    490,
+                    460
+                ],
+                "size": [
+                    300,
+                    50
+                ],
+                "action": "set",
+                "param": "stage=src/levels/test3.level"
             },
             {
                 "text": "Back",

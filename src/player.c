@@ -10,50 +10,48 @@
 #include "character.h"
 #include "player.h"
 
-// ---- Values that are the same for every character ----
-#define PLAYER_FALL_LIMIT_Z				-200.0f	// safety net: falling this far always costs a stock, even if the level has no bounds
-#define PLAYER_HITSTUN_PER_KNOCKBACK	20.0f	// ticks of lost control for every 1.0 of knockback
-#define PLAYER_CAMERA_SPREAD_ZOOM		0.5f	// how much farther the camera pulls back as players spread apart
-#define PLAYER_CAMERA_PITCH				0.0f	// 0 = straight side-on view, negative looks down from above
-#define PLAYER_THROW_OFFSET_X			1.5f	// where a thrown bomb starts, in front of the player
-#define PLAYER_THROW_OFFSET_Z			2.0f	// and how high up (both multiplied by the player's size)
-// Model faces +Y at yaw 0. If the dino faces backwards, swap these two.
+#define PLAYER_FALL_LIMIT_Z				-200.0f
+#define PLAYER_HITSTUN_PER_KNOCKBACK	20.0f
+#define PLAYER_CAMERA_SPREAD_ZOOM		0.5f
+#define PLAYER_CAMERA_PITCH				0.0f
+#define PLAYER_THROW_OFFSET_X			1.5f
+#define PLAYER_THROW_OFFSET_Z			2.0f
+
 #define PLAYER_FACING_RIGHT_YAW	(GFC_PI / 2)
 #define PLAYER_FACING_LEFT_YAW	(-GFC_PI / 2)
 
 typedef struct
 {
-	Uint8 playerIndex;			// 0 = player 1, and so on
-	CharacterDef def;			// all the stats and boxes for this character, loaded from json
+	Uint8 playerIndex;
+	CharacterDef def;
 
 	float cameraFollowDistance;
 	GFC_Vector2D cameraRotation;
 
-	// intent: set by think each frame, consumed by update
-	float moveX;				// -1, 0, or 1
+	float moveX;
 	Uint8 jumpQueued;
 	Uint8 attackQueued;
 	Uint8 throwQueued;
-	Uint8 dropHeld;				// 1 while holding down
+	Uint8 dropHeld;
 
-	int facing;					// 1 = right, -1 = left
+	int facing;
 	Uint8 airJumpsLeft;
 
-	int stocks;					// lives left
-	Uint8 eliminated;			// 1 once the last life is lost
+	int stocks;
+	Uint8 eliminated;
 
 	int attackFrame;
 	Uint8 attackHitMask;
-	int hitstun;		
-	int hazardCooldown;		
-	float percent;				
+	int hitstun;
+	int hazardCooldown;
+	float iceGrip;
+	float percent;
 
-	// power ups
-	ItemBuff buff;		
-	int buffTicks;		
-		Uint8 holding;		
-	ItemDef heldItem;			
-	float baseDrawOffsetZ;		
+	ItemBuff buff;
+	int buffTicks;
+	Uint8 holding;
+	ItemDef heldItem;
+	float baseDrawOffsetZ;
 
 	GFC_Vector3D spawnPoint;
 }PlayerEntityData;
@@ -80,7 +78,6 @@ static Uint8 player_buff_active(PlayerEntityData *data)
 	return (data->buffTicks > 0) ? 1 : 0;
 }
 
-// how big the player is right now: the character's own scale times any size boost
 static float player_size(PlayerEntityData *data)
 {
 	return data->def.scale * (player_buff_active(data) ? data->buff.size : 1.0f);
@@ -159,6 +156,7 @@ void player_free(Entity* self)
 	PlayerEntityData* data;
 	if (!self || !self->data) return;
 	data = (PlayerEntityData*)self->data;
+
 	if (players[data->playerIndex] == self)players[data->playerIndex] = NULL;
 	free(data);
 	self->data = NULL;
@@ -202,7 +200,6 @@ const char *player_get_name(Uint8 playerIndex)
 	data = (PlayerEntityData*)players[playerIndex]->data;
 	return data->def.name;
 }
-
 
 static Uint8 player_command_down(PlayerEntityData *data, const char *action)
 {
@@ -250,7 +247,6 @@ int player_think(Entity* self)
 	return 1;
 }
 
-// hitboxes for debugging
 static GFC_Shape player_world_shape(GFC_Shape shape, int facing, GFC_Vector3D position, float size)
 {
 	if (size != 1)
@@ -278,8 +274,9 @@ static GFC_Shape player_world_shape(GFC_Shape shape, int facing, GFC_Vector3D po
 	}
 	if (facing < 0)
 	{
+
 		if (shape.type == ST_RECT)
-			{
+		{
 			shape.s.r.x = -(shape.s.r.x + shape.s.r.w);
 		}
 		else if (shape.type == ST_CIRCLE)
@@ -300,15 +297,11 @@ GFC_Shape player_get_hurtbox(Entity *player)
 {
 	PlayerEntityData *data;
 	if ((!player)||(!player->data))return gfc_shape_rect(0,0,0,0);
-		data = (PlayerEntityData*)player->data;
-		if (data->eliminated)return gfc_shape_rect(-99999,-99999,0,0);	// out of the game: nothing can touch them
-		return player_world_shape(data->def.hurtbox, data->facing, player->position, player_size(data));
+	data = (PlayerEntityData*)player->data;
+	if (data->eliminated)return gfc_shape_rect(-99999,-99999,0,0);
+	return player_world_shape(data->def.hurtbox, data->facing, player->position, player_size(data));
 }
 
-/**
- * Sends a player flying and takes away their control for a moment.
- * dirX is 1 to launch right, -1 to launch left.
- */
 static void player_launch(Entity *target, PlayerEntityData *targetData, float knockback, float dirX, float angleDegrees)
 {
 	float angle;
@@ -339,7 +332,6 @@ static void player_apply_hit(Entity *self, PlayerEntityData *data, Entity *other
 	slog("player %i hit player %i: %f percent, knockback %f",
 		data->playerIndex + 1, otherData->playerIndex + 1, otherData->percent, knockback);
 }
-
 
 static void player_attack_tick(Entity *self, PlayerEntityData *data)
 {
@@ -373,9 +365,8 @@ static void player_attack_tick(Entity *self, PlayerEntityData *data)
 	if (data->attackFrame > attack->totalFrames)data->attackFrame = 0;
 }
 
-
-#define PLAYER_HAZARD_COOLDOWN	40		
-#define PLAYER_SPIKE_ANGLE		75		
+#define PLAYER_HAZARD_COOLDOWN	40
+#define PLAYER_SPIKE_ANGLE		75
 
 static void player_hazard_tick(Entity *self, PlayerEntityData *data)
 {
@@ -384,17 +375,28 @@ static void player_hazard_tick(Entity *self, PlayerEntityData *data)
 	GFC_Shape hurtbox, area;
 	float knockback, dirX;
 	int i;
+	data->iceGrip = 1;
 	level = level_get_the();
 	if (!level)return;
+	hurtbox = player_get_hurtbox(self);
+
+	for (i = 0; i < level->hazardCount; i++)
+	{
+		hazard = &level->hazards[i];
+		if (hazard->type != HAZARD_ICE)continue;
+		area = gfc_shape_rect(hazard->box.x, hazard->box.z, hazard->box.w, hazard->box.d);
+		if (gfc_shape_overlap(hurtbox, area))data->iceGrip = hazard->power;
+	}
+
 	if (data->hazardCooldown > 0)
 	{
 		data->hazardCooldown--;
 		return;
 	}
-	hurtbox = player_get_hurtbox(self);
 	for (i = 0; i < level->hazardCount; i++)
 	{
 		hazard = &level->hazards[i];
+		if (hazard->type == HAZARD_ICE)continue;
 		area = gfc_shape_rect(hazard->box.x, hazard->box.z, hazard->box.w, hazard->box.d);
 		if (!gfc_shape_overlap(hurtbox, area))continue;
 		if (hazard->type == HAZARD_JUMP_PAD)
@@ -405,7 +407,8 @@ static void player_hazard_tick(Entity *self, PlayerEntityData *data)
 			data->hazardCooldown = 10;
 			return;
 		}
-		// spikes
+
+		if ((hazard->type == HAZARD_GEYSER)&&(level_hazard_state(hazard) != 2))continue;
 		if (player_invincible(data))continue;
 		data->percent += hazard->damage;
 		knockback = (hazard->power + data->percent * 0.01f) / data->def.weight;
@@ -424,6 +427,7 @@ int player_apply_item(Entity *player, const ItemDef *def)
 	switch (def->kind)
 	{
 		case ITEM_BUFF:
+
 			data->buff = def->buff;
 			data->buffTicks = (int)(def->buff.duration * ITEM_TICKS_PER_SECOND);
 			if (data->buffTicks < 1)data->buffTicks = 1;
@@ -464,7 +468,7 @@ void player_blast(GFC_Vector3D center, float radius, float damage, float knockba
 
 		data->percent += damage;
 		launch = (knockback + data->percent * growth) / data->def.weight;
-		dirX = (player->position.x >= center.x) ? 1 : -1;	// away from the middle of the blast
+		dirX = (player->position.x >= center.x) ? 1 : -1;
 		player_launch(player, data, launch, dirX, angle);
 		slog("explosion hit player %i: %f percent, knockback %f",i + 1,data->percent,launch);
 	}
@@ -496,7 +500,7 @@ static void player_update_camera(PlayerEntityData *data)
 		count++;
 	}
 	if (!count)return;
-	target = gfc_vector3d(total.x / count, total.y / count, (total.z + 20.0f) / count);
+	target = gfc_vector3d(total.x / count, total.y / count, (total.z + 20.0) / count);
 	distance = data->cameraFollowDistance + (maxX - minX) * PLAYER_CAMERA_SPREAD_ZOOM;
 
 	gfc_vector3d_scale(offset, offset, distance);
@@ -540,7 +544,7 @@ int player_draw(Entity* self)
 	PlayerEntityData* data;
 	if (!self || !self->data) return 0;
 	data = (PlayerEntityData*)self->data;
-	return data->eliminated ? 1 : 0;	// 1 = skip drawing, the player is out of the match
+	return data->eliminated ? 1 : 0;
 }
 
 int player_update(Entity* self)
@@ -549,12 +553,14 @@ int player_update(Entity* self)
 	CharacterDef *def;
 	float accel, friction, runSpeed, jumpSpeed, airJumpSpeed;
 	float speedMult = 1, jumpMult = 1, size;
+	float carryX, carryZ;
 	float groundZ = 0;
 	float moveX;
 	Uint8 jump, attack, throwItem;
 	if (!self || !self->data) return 0;
 	data = (PlayerEntityData*)self->data;
 	def = &data->def;
+
 	if (data->eliminated)
 	{
 		self->velocity = gfc_vector3d(0, 0, 0);
@@ -563,6 +569,15 @@ int player_update(Entity* self)
 			player_update_camera(data);
 		}
 		return 1;
+	}
+
+	if (self->grounded)
+	{
+		if (level_platform_carry(level_get_the(), self->position.x, self->position.y, self->position.z, &carryX, &carryZ))
+		{
+			self->position.x += carryX;
+			self->position.z += carryZ;
+		}
 	}
 
 	if ((self->velocity.z <= 0) &&
@@ -590,9 +605,7 @@ int player_update(Entity* self)
 		groundZ = 0;
 	}
 
-
 	player_hazard_tick(self, data);
-
 
 	if (data->buffTicks > 0)
 	{
@@ -605,6 +618,7 @@ int player_update(Entity* self)
 	if (player_buff_active(data))
 	{
 		speedMult = data->buff.speedMult;
+
 		jumpMult = sqrt(data->buff.jumpMult);
 	}
 	size = player_size(data);
@@ -618,6 +632,7 @@ int player_update(Entity* self)
 	data->throwQueued = 0;
 	if (data->hitstun > 0)
 	{
+
 		data->hitstun--;
 		moveX = 0;
 		jump = 0;
@@ -628,6 +643,12 @@ int player_update(Entity* self)
 	runSpeed = def->runSpeed * speedMult;
 	accel = (self->grounded ? def->groundAccel : def->airAccel) * speedMult;
 	friction = (self->grounded ? def->groundFriction : def->airFriction) * speedMult;
+	if (self->grounded)
+	{
+
+		friction *= data->iceGrip;
+		accel *= (data->iceGrip * 3 > 1) ? 1 : data->iceGrip * 3;
+	}
 	if (moveX)
 	{
 		self->velocity.x += moveX * accel;
@@ -681,7 +702,9 @@ int player_update(Entity* self)
 
 	self->velocity.z -= def->gravity;
 	if (self->velocity.z < -def->maxFallSpeed) self->velocity.z = -def->maxFallSpeed;
+
 	self->velocity.y = 0;
+
 	if (data->playerIndex == 0)
 	{
 		player_update_camera(data);
@@ -702,6 +725,7 @@ static void player_draw_shape(GFC_Shape shape, float y, GFC_Color color)
 	}
 	else if (shape.type == ST_CIRCLE)
 	{
+
 		level_draw_box(level, shape.s.c.x - shape.s.c.r, y - DEBUG_BOX_DEPTH / 2, shape.s.c.y - shape.s.c.r,
 			shape.s.c.r * 2, DEBUG_BOX_DEPTH, shape.s.c.r * 2, color);
 	}

@@ -14,14 +14,16 @@
 #include "window.h"
 #include "match.h"
 
+// ---- HUD layout, in pixels ----
 #define HUD_PANEL_W			300
 #define HUD_PANEL_H			96
 #define HUD_BOTTOM_MARGIN	14
 
-#define MATCH_PLAYERS				2		
-#define MATCH_ITEM_DROP_SECONDS		20		
-#define MATCH_ITEM_DROP_HEIGHT		40	
-#define MATCH_ITEM_DROP_RANGE		40		
+// ---- Match settings ----
+#define MATCH_PLAYERS				2		// how many players a match has
+#define MATCH_ITEM_DROP_SECONDS		20		// a random power-up drops this often. 0 turns drops off.
+#define MATCH_ITEM_DROP_HEIGHT		40		// how high up they appear (they fall onto the nearest platform)
+#define MATCH_ITEM_DROP_RANGE		40		// they appear between -range and +range on the x axis
 
 static GFC_Vector3D match_spawns[MATCH_PLAYERS] =
 {
@@ -51,7 +53,11 @@ int match_is_active()
 	return match_state.active;
 }
 
-
+/**
+ * A stage json can have its own power-ups, for testing:
+ *   "itemDropSeconds": 5                      how often a random one drops (0 = never)
+ *   "items": [ {"name":"star","x":0,"z":4}, ... ]    (y is optional)    placed when the match starts
+ */
 static void match_load_stage_items(Level *level)
 {
 	SJson *data, *list, *entry;
@@ -153,6 +159,9 @@ void match_update()
 
 	if (!match_state.active)return;
 
+	level_update(level_get_the());	// breakable platforms
+
+	// ---- power-up drops ----
 	if (match_state.dropSeconds > 0)
 	{
 		match_state.itemTimer++;
@@ -164,6 +173,7 @@ void match_update()
 		}
 	}
 
+	// ---- last player standing wins ----
 	for (i = 0; i < PLAYER_MAX; i++)
 	{
 		if (!player_get(i))continue;
@@ -206,15 +216,19 @@ void match_draw_hud()
 		y = screen.y - HUD_PANEL_H - HUD_BOTTOM_MARGIN;
 		slot++;
 
+		// who it is
 		snprintf(text, sizeof(text), "P%i  %s", i + 1, player_get_name(i));
 		gf2d_font_draw_line_tag(text, FT_Small, GFC_COLOR_WHITE, gfc_vector2d(x, y + 14));
 
+		// percent: white at 0, turning red as it climbs
 		percent = player_get_percent(i);
 		t = percent / 150.0f;
 		if (t > 1)t = 1;
 		color = gfc_color(1, 1 - t, 1 - t, 1);
 		snprintf(text, sizeof(text), "%i%%", (int)percent);
 		gf2d_font_draw_line_tag(text, FT_H1, color, gfc_vector2d(x, y + 38));
+
+		// lives left
 		snprintf(text, sizeof(text), "Lives: %i", player_get_stocks(i));
 		gf2d_font_draw_line_tag(text, FT_Small, GFC_COLOR_WHITE, gfc_vector2d(x + 150, y + 50));
 	}
