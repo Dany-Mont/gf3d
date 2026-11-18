@@ -84,9 +84,6 @@ void entity_update(Entity* self)
 	if (!self || !self->_inuse) return;
 	gfc_vector3d_add(self->position, self->position, self->velocity);
 
-	// NOTE: the old global dampening was removed. Friction, gravity, and
-	// speed limits are now handled by each entity's own update function
-	// (see player_update), so they can differ per entity and per state.
 
 	if (self->update)
 	{
