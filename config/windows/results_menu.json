@@ -1,0 +1,48 @@
+{
+    "window": {
+        "name": "results_menu",
+        "state": "results",
+        "position": [
+            390,
+            200
+        ],
+        "size": [
+            500,
+            300
+        ],
+        "labels": [
+            {
+                "text": "Match Over",
+                "position": [
+                    180,
+                    25
+                ],
+                "style": "H1"
+            },
+            {
+                "text": "",
+                "position": [
+                    150,
+                    100
+                ],
+                "style": "H2",
+                "text_from": "result_text"
+            }
+        ],
+        "buttons": [
+            {
+                "text": "Main Menu",
+                "position": [
+                    125,
+                    200
+                ],
+                "size": [
+                    250,
+                    50
+                ],
+                "action": "goto",
+                "param": "main_menu"
+            }
+        ]
+    }
+}

@@ -50,7 +50,7 @@ void model_manager_init(Uint32 modelCount)
     model_manager.modelList = gfc_allocate_array(sizeof(Model),modelCount);
     if (!model_manager.modelList)
     {
-        //gfc_allocate_array already logged the error
+        slog("failed to allocate model list");
         return;
     }
     model_manager.modelCount = modelCount;
@@ -58,8 +58,7 @@ void model_manager_init(Uint32 modelCount)
     //the model system owns the mesh system, it has to exist before any model loads
     gf3d_mesh_system_init(1024);
 
-    //sky pipeline, not set up yet. model_queue_render_sky does nothing while this is NULL
-    /*
+
     model_manager.skyPipe = gf3d_pipeline_create_from_config(
         model_manager.device,
         "config/sky_pipeline.cfg",
@@ -70,7 +69,7 @@ void model_manager_init(Uint32 modelCount)
         MESH_ATTRIBUTE_COUNT,
         sizeof(ModelUBO),
         VK_INDEX_TYPE_UINT16);
-    */
+
 
     model_manager.pipe = gf3d_pipeline_create_from_config(
         model_manager.device,
@@ -81,7 +80,7 @@ void model_manager_init(Uint32 modelCount)
         gf3d_mesh_get_attribute_descriptions(NULL),
         MESH_ATTRIBUTE_COUNT,
         sizeof(ModelUBO),
-        VK_INDEX_TYPE_UINT16);//must match the Face index type in gf3d_mesh.h
+        VK_INDEX_TYPE_UINT16);
     if (!model_manager.pipe)
     {
         slog("failed to make pipeline for models");
@@ -242,7 +241,6 @@ void model_free(Model *model)
 {
     if(!model)return;
     model->_refCount--;
-    //not deleting at 0 on purpose, model_new recycles unused slots and reloading is skipped if it gets asked for again
 }
 
 void model_delete(Model *model)

@@ -1,0 +1,51 @@
+{
+    "window": {
+        "name": "main_menu",
+        "state": "menu",
+        "position": [
+            0,
+            0
+        ],
+        "size": [
+            1280,
+            720
+        ],
+        "labels": [
+            {
+                "text": "TBD",
+                "position": [
+                    420,
+                    160
+                ],
+                "style": "H1"
+            }
+        ],
+        "buttons": [
+            {
+                "text": "Start",
+                "position": [
+                    490,
+                    320
+                ],
+                "size": [
+                    300,
+                    50
+                ],
+                "action": "open",
+                "param": "character_select"
+            },
+            {
+                "text": "Quit",
+                "position": [
+                    490,
+                    400
+                ],
+                "size": [
+                    300,
+                    50
+                ],
+                "action": "quit"
+            }
+        ]
+    }
+}

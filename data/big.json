@@ -1,0 +1,46 @@
+{
+    "character": {
+        "model": "models/dino/dino.model",
+        "groundAccel": 0.12,
+        "groundFriction": 0.15,
+        "airAccel": 0.04,
+        "airFriction": 0.01,
+        "gravity": 0.06,
+        "maxFallSpeed": 1.2,
+        "maxAirJumps": 1,
+        "hurtbox": {
+            "type": "rect",
+            "dimensions": [
+                -1.5,
+                0,
+                3,
+                10
+            ]
+        },
+        "name": "Big",
+        "runSpeed": 0.4,
+        "jumpSpeed": 1.1,
+        "airJumpSpeed": 1.0,
+        "weight": 1.2,
+        "strength": 1.5,
+        "attack": {
+            "hitbox": {
+                "type": "rect",
+                "dimensions": [
+                    3.0,
+                    1.0,
+                    6.0,
+                    6.0
+                ]
+            },
+            "startFrame": 40,
+            "activeFrames": 5,
+            "totalFrames": 54,
+            "damage": 14,
+            "baseKnockback": 0.7,
+            "knockbackGrowth": 0.012,
+            "knockbackAngle": 45
+        },
+        "scale": 1.5
+    }
+}

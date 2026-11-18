@@ -27,5 +27,6 @@ void main()
     outUV = inUV;
     outNormal = vec4(inNormal,0);
     outColorMod = ubo.color;
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition,1.0);   
+    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition,1.0);
+
 }

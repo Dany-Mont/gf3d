@@ -1,0 +1,92 @@
+{
+    "level": {
+        "sky": "models/sky.model",
+        "terrain": "models/floor.model",
+        "music": "sound/Oct.wav",
+        "bounds": {
+            "m": [
+                -110,
+                -30,
+                -40
+            ],
+            "s": [
+                220,
+                60,
+                130
+            ]
+        },
+        "platforms": [
+            {
+                "m": [
+                    -70,
+                    -15,
+                    -5
+                ],
+                "s": [
+                    140,
+                    30,
+                    6
+                ]
+            }
+        ],
+        "itemDropSeconds": 5,
+        "items": [
+            {
+                "name": "mushroom",
+                "x": -40,
+                "z": 4
+            },
+            {
+                "name": "star",
+                "x": -20,
+                "z": 4
+            },
+            {
+                "name": "speed_boots",
+                "x": 0,
+                "z": 4
+            },
+            {
+                "name": "heart",
+                "x": 20,
+                "z": 4
+            },
+            {
+                "name": "bomb",
+                "x": 40,
+                "z": 4
+            }
+        ],
+        "hazards": [
+            {
+                "type": "jump_pad",
+                "m": [
+                    -62,
+                    -2,
+                    1
+                ],
+                "s": [
+                    12,
+                    4,
+                    0.6
+                ],
+                "power": 2.2
+            },
+            {
+                "type": "spikes",
+                "m": [
+                    50,
+                    -2,
+                    1
+                ],
+                "s": [
+                    14,
+                    4,
+                    1.5
+                ],
+                "damage": 8,
+                "power": 0.9
+            }
+        ]
+    }
+}

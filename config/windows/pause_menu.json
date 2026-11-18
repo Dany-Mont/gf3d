@@ -1,0 +1,51 @@
+{
+    "window": {
+        "name": "pause_menu",
+        "state": "paused",
+        "position": [
+            440,
+            200
+        ],
+        "size": [
+            400,
+            300
+        ],
+        "labels": [
+            {
+                "text": "Paused",
+                "position": [
+                    160,
+                    25
+                ],
+                "style": "H2"
+            }
+        ],
+        "buttons": [
+            {
+                "text": "Resume",
+                "position": [
+                    75,
+                    100
+                ],
+                "size": [
+                    250,
+                    50
+                ],
+                "action": "resume"
+            },
+            {
+                "text": "Main Menu",
+                "position": [
+                    75,
+                    170
+                ],
+                "size": [
+                    250,
+                    50
+                ],
+                "action": "goto",
+                "param": "main_menu"
+            }
+        ]
+    }
+}

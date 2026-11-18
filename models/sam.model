@@ -1,0 +1,7 @@
+{
+    "model":
+    {
+        "obj":"models/samus/sam.obj",
+        "texture":"models/samus/sam.png"
+    }
+}

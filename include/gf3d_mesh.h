@@ -44,7 +44,7 @@ typedef struct
 //these are each group of verticies+faces that makes up an individual thing
 typedef struct
 {
-    Uint32          vertexCount;
+    Uint64          vertexCount;
     VkBuffer        vertexBuffer;
     VkDeviceMemory  vertexBufferMemory;
     Uint32          faceCount;
@@ -53,7 +53,7 @@ typedef struct
     ObjData        *objData;
 }MeshPrimitive;
 
-//these are groups of prims that make up the whole mesh for a bigger thing
+
 typedef struct
 {
     GFC_TextLine        filename; //in mesh load

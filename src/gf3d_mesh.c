@@ -29,7 +29,7 @@ void gf3d_mesh_primitive_free(MeshPrimitive *prim);
 int gf3d_mesh_primitive_buffer_create(MeshPrimitive *prim);
 void gf3d_mesh_primitive_buffer_free(MeshPrimitive *prim);
 Mesh *gf3d_mesh_get_by_filename(const char *filename);
-//forward declarations end
+
 
 
 void gf3d_mesh_system_init(Uint32 mesh_max)
@@ -47,13 +47,11 @@ void gf3d_mesh_system_init(Uint32 mesh_max)
     mesh_manager.meshList = gfc_allocate_array(sizeof(Mesh),mesh_max);
     if (!mesh_manager.meshList)
     {
-        //gfc_allocate_array already logged the error
+        slog ("failed to allocate mesh manager");
         return;
     }
     mesh_manager.meshCount = mesh_max;
     mesh_manager.device = gf3d_vgraphics_get_default_logical_device();
-    //the attribute and binding descriptions are filled in by their getters,
-    //model_manager_init calls those when it builds the pipeline
     atexit(gf3d_mesh_system_close);
 }
 
@@ -81,7 +79,6 @@ Mesh *gf3d_mesh_new()
         if (emptyIndex < 0)emptyIndex = i;
         if (strlen(mesh_manager.meshList[i].filename) == 0)
         {
-            //never used slot, take it
             mesh_manager.meshList[i].primitives = gfc_list_new();
             if (mesh_manager.meshList[i].primitives == NULL)
             {
@@ -248,7 +245,6 @@ MeshPrimitive *gf3d_mesh_primitive_new()
     prim = gfc_allocate_array(sizeof(MeshPrimitive),1);
     if(!prim)
     {
-        //gfc_allocate_array already logged the error
         return NULL;
     }
     return prim;

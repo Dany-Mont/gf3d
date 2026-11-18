@@ -1,0 +1,7 @@
+{
+    "model":
+    {
+        "obj":"models/primitives/cube.obj",
+        "texture":"models/primitives/flatwhite.png"
+    }
+}

@@ -1,0 +1,171 @@
+{
+    "window": {
+        "name": "character_select",
+        "state": "menu",
+        "position": [
+            0,
+            0
+        ],
+        "size": [
+            1280,
+            720
+        ],
+        "labels": [
+            {
+                "text": "Choose Characters",
+                "position": [
+                    450,
+                    40
+                ],
+                "style": "H1"
+            },
+            {
+                "text": "Player 1",
+                "position": [
+                    100,
+                    180
+                ],
+                "style": "H2"
+            },
+            {
+                "text": "Player 2",
+                "position": [
+                    700,
+                    130
+                ],
+                "style": "H2"
+            }
+        ],
+        "buttons": [
+            {
+                "text": "Sword",
+                "position": [
+                    100,
+                    240
+                ],
+                "size": [
+                    300,
+                    50
+                ],
+                "action": "set",
+                "param": "p1_character=data/sword.json"
+            },
+            {
+                "text": "Big",
+                "position": [
+                    100,
+                    300
+                ],
+                "size": [
+                    300,
+                    50
+                ],
+                "action": "set",
+                "param": "p1_character=data/big.json"
+            },
+            {
+                "text": "Small",
+                "position": [
+                    100,
+                    360
+                ],
+                "size": [
+                    300,
+                    50
+                ],
+                "action": "set",
+                "param": "p1_character=data/small.json"
+            },
+            {
+                "text": "Sword",
+                "position": [
+                    700,
+                    240
+                ],
+                "size": [
+                    300,
+                    50
+                ],
+                "action": "set",
+                "param": "p2_character=data/sword.json"
+            },
+            {
+                "text": "Big",
+                "position": [
+                    700,
+                    300
+                ],
+                "size": [
+                    300,
+                    50
+                ],
+                "action": "set",
+                "param": "p2_character=data/big.json"
+            },
+            {
+                "text": "Small",
+                "position": [
+                    700,
+                    360
+                ],
+                "size": [
+                    300,
+                    50
+                ],
+                "action": "set",
+                "param": "p2_character=data/small.json"
+            },
+            {
+                "text": "Human",
+                "position": [
+                    700,
+                    170
+                ],
+                "size": [
+                    140,
+                    50
+                ],
+                "action": "set",
+                "param": "p2_cpu=0"
+            },
+            {
+                "text": "CPU",
+                "position": [
+                    860,
+                    170
+                ],
+                "size": [
+                    140,
+                    50
+                ],
+                "action": "set",
+                "param": "p2_cpu=1"
+            },
+            {
+                "text": "Back",
+                "position": [
+                    100,
+                    620
+                ],
+                "size": [
+                    200,
+                    50
+                ],
+                "action": "back"
+            },
+            {
+                "text": "Next",
+                "position": [
+                    980,
+                    620
+                ],
+                "size": [
+                    200,
+                    50
+                ],
+                "action": "open",
+                "param": "stage_select"
+            }
+        ]
+    }
+}

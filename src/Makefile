@@ -27,7 +27,7 @@ INC_PARAMS =$(foreach d, $(INC_PATHS), -I$d)
 SDL_CFLAGS = `sdl2-config --cflags` $(INC_PARAMS) $(VULKAN_CFLAGS)
 SDL_LDFLAGS = `sdl2-config --libs` -L/opt/homebrew/lib -lSDL2_image -lSDL2_ttf -lSDL2_mixer -lpng -ljpeg -lz $(VULKAN_LDFLAGS) -lm
 LFLAGS = -g  -o ../$(PROJECT) 
-CFLAGS = -g -fPIC -Wall -pedantic -std=gnu99 -fgnu89-inline -Wno-unknown-pragmas -Wno-variadic-macros -Wformat-truncation=0 -Wno-strict-prototypes
+CFLAGS = -g -fPIC -Wall -pedantic -std=gnu99 -fgnu89-inline -Wno-unknown-pragmas -Wno-variadic-macros -Wno-format-truncation -Wno-strict-prototypes
 # -ffast-math for relase version
 
 DOXYGEN = doxygen

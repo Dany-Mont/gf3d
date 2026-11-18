@@ -1,0 +1,35 @@
+{
+    "windows":["config/windows/main_menu.json",
+    "config/windows/character_select.json",
+    "config/windows/stage_select.json",
+    "config/windows/pause_menu.json",
+    "config/windows/results_menu.json"],
+    "settings":
+    [
+        {
+            "key":"p1_character",
+            "value":"characters/sword.json"
+        },
+        {
+            "key":"p2_character",
+            "value":"characters/small.json"
+        },
+        {
+            "key":"p2_cpu",
+            "value":"0"
+        },
+        {
+            "key":"stage",
+            "value":"config/level.json"
+        },
+        {
+            "key":"stocks",
+            "value":"3"
+        },
+        {
+            "key":"result_text",
+            "value":"Match over"
+        }
+    ],
+    "start":"main_menu"
+}
